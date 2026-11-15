@@ -352,6 +352,35 @@ async fn the_limits_hold_when_readings_finish_at_once(db: PgPool) {
     );
 }
 
+/// The lock `verify::consider` takes first (its `LOCK`).
+const CHECK_LOCK: i64 = 7_095_465_005_590_559_092;
+
+/// The check's lock in this test's database: (held, waited for). Other
+/// advisory locks are not counted. (Postgres shows a 64-bit key as two
+/// halves, `classid` and `objid`, with `objsubid` 1.)
+async fn advisory_locks(db: &PgPool) -> (i64, i64) {
+    sqlx::query_as(
+        "SELECT count(*) FILTER (WHERE granted), count(*) FILTER (WHERE NOT granted) FROM pg_locks
+         WHERE locktype = 'advisory' AND objsubid = 1
+           AND ((classid::bigint << 32) | objid::bigint) = $1
+           AND database = (SELECT oid FROM pg_database WHERE datname = current_database())",
+    )
+    .bind(CHECK_LOCK)
+    .fetch_one(db)
+    .await
+    .unwrap()
+}
+
+async fn until_advisory_locks(db: &PgPool, wanted: impl Fn((i64, i64)) -> bool, what: &str) {
+    for _ in 0..400 {
+        if wanted(advisory_locks(db).await) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+    panic!("{what}");
+}
+
 #[sqlx::test(migrations = "./migrations")]
 async fn a_document_replaced_while_it_was_read_activates_nothing(db: PgPool) {
     let site = Site::with_auto(db);
@@ -362,17 +391,33 @@ async fn a_document_replaced_while_it_was_read_activates_nothing(db: PgPool) {
         .execute(&site.db)
         .await
         .unwrap();
+    // The replacement queues the new file's own reading, which saves (it
+    // fails here: no OCR in this build) and then runs the automatic check on
+    // its own task. Hold the check's lock so that task stops at its door,
+    // then let it in and wait for it to finish, all before the steps below:
+    // otherwise it lands at any point of them and changes what they see.
+    let mut gate = site.db.begin().await.unwrap();
+    sqlx::query("SELECT pg_advisory_xact_lock($1)").bind(CHECK_LOCK).execute(&mut *gate).await.unwrap();
     let replace = [("tin_id", File("other.png", PNG))];
     let path = format!("/tins/claims/{claim}/documents/{old}/replace");
     assert_eq!(
         location(&site.upload(&path, &cookie, &replace).await),
         format!("/tins/claims/{claim}/files?notice=file_replaced")
     );
+    site.readings(claim).await;
+    until_advisory_locks(
+        &site.db,
+        |(_, waiting)| waiting == 1,
+        "the new file's check did not reach the lock (is CHECK_LOCK still the LOCK of src/account/verify.rs?)",
+    )
+    .await;
+    gate.commit().await.unwrap();
+    // The check runs to its end (it takes the lock, then frees it).
+    until_advisory_locks(&site.db, |held| held == (0, 0), "the new file's check did not finish").await;
     // The old reading finishing finds its document gone.
     assert_eq!(consider(&site, old).await, Outcome::Gone);
     assert_eq!(row(&site.db, claim).await.0, "pending");
     // The new file is judged on its own reading.
-    site.readings(claim).await;
     let new = tin_id(&site.db, claim).await;
     assert_ne!(new, old);
     sqlx::query("UPDATE document_readings SET status = 'reading' WHERE document_id = $1")
