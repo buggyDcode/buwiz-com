@@ -113,6 +113,8 @@ async fn the_server_process_takes_sigusr1_and_stops_cleanly(db: PgPool) {
         );
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
+    // The port has its own limit, counted from the first log line.
+    let deadline = Instant::now() + Duration::from_secs(180);
     loop {
         assert!(alive(&mut child), "the server ended while starting");
         signal(libc::SIGUSR1);

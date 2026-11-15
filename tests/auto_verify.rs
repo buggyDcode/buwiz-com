@@ -355,12 +355,17 @@ async fn the_limits_hold_when_readings_finish_at_once(db: PgPool) {
 /// The lock `verify::consider` takes first (its `LOCK`).
 const CHECK_LOCK: i64 = 7_095_465_005_590_559_092;
 
-/// Advisory locks in this test's database: (held, waited for).
+/// The check's lock in this test's database: (held, waited for). Other
+/// advisory locks are not counted. (Postgres shows a 64-bit key as two
+/// halves, `classid` and `objid`, with `objsubid` 1.)
 async fn advisory_locks(db: &PgPool) -> (i64, i64) {
     sqlx::query_as(
         "SELECT count(*) FILTER (WHERE granted), count(*) FILTER (WHERE NOT granted) FROM pg_locks
-         WHERE locktype = 'advisory' AND database = (SELECT oid FROM pg_database WHERE datname = current_database())",
+         WHERE locktype = 'advisory' AND objsubid = 1
+           AND ((classid::bigint << 32) | objid::bigint) = $1
+           AND database = (SELECT oid FROM pg_database WHERE datname = current_database())",
     )
+    .bind(CHECK_LOCK)
     .fetch_one(db)
     .await
     .unwrap()
@@ -389,8 +394,8 @@ async fn a_document_replaced_while_it_was_read_activates_nothing(db: PgPool) {
     // The replacement queues the new file's own reading, which saves (it
     // fails here: no OCR in this build) and then runs the automatic check on
     // its own task. Hold the check's lock so that task stops at its door,
-    // and let it in only when the test is ready for it: otherwise it lands
-    // at any point of the steps below and changes what they see.
+    // then let it in and wait for it to finish, all before the steps below:
+    // otherwise it lands at any point of them and changes what they see.
     let mut gate = site.db.begin().await.unwrap();
     sqlx::query("SELECT pg_advisory_xact_lock($1)").bind(CHECK_LOCK).execute(&mut *gate).await.unwrap();
     let replace = [("tin_id", File("other.png", PNG))];
@@ -400,7 +405,12 @@ async fn a_document_replaced_while_it_was_read_activates_nothing(db: PgPool) {
         format!("/tins/claims/{claim}/files?notice=file_replaced")
     );
     site.readings(claim).await;
-    until_advisory_locks(&site.db, |(_, waiting)| waiting == 1, "the new file's check did not reach the lock").await;
+    until_advisory_locks(
+        &site.db,
+        |(_, waiting)| waiting == 1,
+        "the new file's check did not reach the lock (is CHECK_LOCK still the LOCK of src/account/verify.rs?)",
+    )
+    .await;
     gate.commit().await.unwrap();
     // The check runs to its end (it takes the lock, then frees it).
     until_advisory_locks(&site.db, |held| held == (0, 0), "the new file's check did not finish").await;

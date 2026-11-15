@@ -387,6 +387,7 @@ async fn the_compact_sign_rides_on_existing_responses(db: PgPool) {
     let seq = |compact: &str| -> i64 {
         compact.split(", ").find_map(|part| part.strip_prefix("seq=")).unwrap().parse().unwrap()
     };
+    well_inside_a_mark().await;
     let mark = round_down(OffsetDateTime::now_utc());
     let first = header(&get(&public, "/.well-known/buwiz-hpke.json", &[]).await, "buwiz-bir").unwrap().to_owned();
     let first_status = text(get(&public, "/api/bir/status", &[]).await).await;
@@ -405,10 +406,9 @@ async fn the_compact_sign_rides_on_existing_responses(db: PgPool) {
     assert!(live.contains("state=offline") && live.ends_with("note=?1"), "{live}");
     let open = header(&get(&public, "/.well-known/buwiz-hpke.json", &[]).await, "buwiz-bir").unwrap().to_owned();
     let status = text(get(&public, "/api/bir/status", &[]).await).await;
-    if round_down(OffsetDateTime::now_utc()) == mark {
-        assert_eq!(open, first, "the public sign moves only on a 5-minute mark");
-        assert_eq!(status, first_status);
-    }
+    assert_eq!(round_down(OffsetDateTime::now_utc()), mark, "the views ran across a mark");
+    assert_eq!(open, first, "the public sign moves only on a 5-minute mark");
+    assert_eq!(status, first_status);
     // At the next mark, everything public has it.
     let next = mark + Duration::minutes(5);
     let published = uptime.published("https://ebirforms.buwiz.com", next);
@@ -590,19 +590,25 @@ async fn the_my_tins_banner_follows_the_sign(db: PgPool) {
     }
 }
 
+/// The public views read the wall clock, so a scenario that compares two
+/// views must sit inside one 5-minute mark: this returns only with a safe
+/// stretch of the mark left, waiting for the next mark when it must. The
+/// steps after it take about a second.
+async fn well_inside_a_mark() {
+    let now = OffsetDateTime::now_utc();
+    let left = Duration::minutes(5) - (now - round_down(now));
+    if left < Duration::seconds(30) {
+        tokio::time::sleep((left + Duration::seconds(1)).unsigned_abs()).await;
+    }
+}
+
 /// The status page and the history come from memory, made once a 5-minute
 /// mark: a line written meanwhile shows from the next mark. The page is
 /// limited per address with the reads, and cached publicly for a minute
 /// when the request carries no cookie.
 #[sqlx::test]
 async fn the_page_and_the_history_cost_no_query_per_view(db: PgPool) {
-    // The pages read the wall clock, so the scenario must sit inside one
-    // mark: start it only with a safe stretch of the mark left (at worst
-    // wait for the next mark), and the steps below take a few seconds.
-    let left = Duration::minutes(5) - (OffsetDateTime::now_utc() - round_down(OffsetDateTime::now_utc()));
-    if left < Duration::seconds(30) {
-        tokio::time::sleep((left + Duration::seconds(1)).unsigned_abs()).await;
-    }
+    well_inside_a_mark().await;
     let site = site(&db, Level::Public);
     sign_in(&site, Light::Online).await;
     let mark = round_down(OffsetDateTime::now_utc());
@@ -619,8 +625,10 @@ async fn the_page_and_the_history_cost_no_query_per_view(db: PgPool) {
     assert_eq!(round_down(OffsetDateTime::now_utc()), mark, "the views ran across a mark");
     assert_eq!(again, first, "from memory");
     assert_eq!(again_page, first_page, "from memory");
-    // The next mark's has it (made afresh: the site's own memory is of this mark).
-    let next = buwiz_cloud::uptime::history::Cache::default().get(&db, mark + Duration::minutes(5)).await.unwrap();
+    // The next mark's has it, from the site's own memory: the views above
+    // stayed inside this mark, so it has not made the next one yet. Asked a
+    // minute into that mark, past the pause the memory keeps between makings.
+    let next = site.state.uptime.history.get(&db, mark + Duration::minutes(6)).await.unwrap();
     let line = next.days.iter().find(|line| line.day == today - Duration::days(5)).unwrap();
     assert_eq!(line.state, "offline");
     // With a cookie the page is the viewer's: never kept by a shared cache.
