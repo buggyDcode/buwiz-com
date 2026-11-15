@@ -309,7 +309,6 @@ pub async fn home_page(cx: &Cx) -> Result<impl View> {
     let yours = guess_device(user_agent);
     let (sign_in, sign_up) = (account_url(cx, "/login"), account_url(cx, "/signup"));
     Ok(view! {
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap">
         <link rel="stylesheet" href="/assets/demo.css">
         <main class="home landing">
             hero(release: release, yours: yours, forms_origin: forms_origin)
