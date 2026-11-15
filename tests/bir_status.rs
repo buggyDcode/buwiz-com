@@ -596,6 +596,13 @@ async fn the_my_tins_banner_follows_the_sign(db: PgPool) {
 /// when the request carries no cookie.
 #[sqlx::test]
 async fn the_page_and_the_history_cost_no_query_per_view(db: PgPool) {
+    // The pages read the wall clock, so the scenario must sit inside one
+    // mark: start it only with a safe stretch of the mark left (at worst
+    // wait for the next mark), and the steps below take a few seconds.
+    let left = Duration::minutes(5) - (OffsetDateTime::now_utc() - round_down(OffsetDateTime::now_utc()));
+    if left < Duration::seconds(30) {
+        tokio::time::sleep((left + Duration::seconds(1)).unsigned_abs()).await;
+    }
     let site = site(&db, Level::Public);
     sign_in(&site, Light::Online).await;
     let mark = round_down(OffsetDateTime::now_utc());
@@ -609,12 +616,11 @@ async fn the_page_and_the_history_cost_no_query_per_view(db: PgPool) {
     // ... is not in what is served within this mark.
     let again = text(get(&site, "/api/bir/history", &[]).await).await;
     let again_page = text(site.on_host(FORMS_HOST, "/bir-status").await).await;
-    if round_down(OffsetDateTime::now_utc()) == mark {
-        assert_eq!(again, first, "from memory");
-        assert_eq!(again_page, first_page, "from memory");
-    }
-    // The next mark's has it.
-    let next = site.state.uptime.history.get(&db, mark + Duration::minutes(5)).await.unwrap();
+    assert_eq!(round_down(OffsetDateTime::now_utc()), mark, "the views ran across a mark");
+    assert_eq!(again, first, "from memory");
+    assert_eq!(again_page, first_page, "from memory");
+    // The next mark's has it (made afresh: the site's own memory is of this mark).
+    let next = buwiz_cloud::uptime::history::Cache::default().get(&db, mark + Duration::minutes(5)).await.unwrap();
     let line = next.days.iter().find(|line| line.day == today - Duration::days(5)).unwrap();
     assert_eq!(line.state, "offline");
     // With a cookie the page is the viewer's: never kept by a shared cache.

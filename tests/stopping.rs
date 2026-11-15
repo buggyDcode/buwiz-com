@@ -97,14 +97,20 @@ async fn the_server_process_takes_sigusr1_and_stops_cleanly(db: PgPool) {
     // While it starts (from its first log line, written once it catches
     // SIGUSR1: the first instant of a process cannot), until its port
     // answers.
-    let deadline = Instant::now() + Duration::from_secs(30);
+    // The first start of a fresh binary can be slow (a cold file cache), so
+    // the limit is generous; it is polled, never slept for.
+    let deadline = Instant::now() + Duration::from_secs(180);
     while std::fs::read_to_string(&log).unwrap().is_empty() {
         assert!(
             alive(&mut child),
             "the server ended before it logged: {}",
             std::fs::read_to_string(dir.join("server.err")).unwrap()
         );
-        assert!(Instant::now() < deadline, "the server logged nothing");
+        assert!(
+            Instant::now() < deadline,
+            "the server logged nothing in 180 seconds: {}",
+            std::fs::read_to_string(dir.join("server.err")).unwrap()
+        );
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
     loop {
@@ -113,7 +119,11 @@ async fn the_server_process_takes_sigusr1_and_stops_cleanly(db: PgPool) {
         if tokio::net::TcpStream::connect(("127.0.0.1", port)).await.is_ok() {
             break;
         }
-        assert!(Instant::now() < deadline, "the server did not start");
+        assert!(
+            Instant::now() < deadline,
+            "the server's port did not answer in 180 seconds: {}",
+            std::fs::read_to_string(dir.join("server.err")).unwrap()
+        );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
     // While it serves.
