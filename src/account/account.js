@@ -1,4 +1,4 @@
-// Progressive enhancement for the account and staff pages. Every page works
+// Progressive enhancement for the account pages. Every page works
 // without it: forms post as plain HTML forms. Loaded in <head> without
 // `defer`, so the `js` class is on <html> before the first paint (the
 // add-a-TIN steps would otherwise flash stacked), and the rest waits for
@@ -12,7 +12,6 @@ document.documentElement.classList.add("js");
     for (const input of document.querySelectorAll("input[data-code]")) codeBoxes(input);
     for (const timer of document.querySelectorAll("[data-expires-at]")) codeTimer(timer);
     for (const form of document.querySelectorAll("form[data-addtin]")) addTin(form);
-    for (const viewer of document.querySelectorAll(".viewer")) documentViewer(viewer);
     for (const button of document.querySelectorAll("button[data-copy]")) copier(button);
 
     // Files chosen in a drop zone: show the name and size, flag big files.
@@ -601,27 +600,6 @@ document.documentElement.classList.add("js");
       sync();
     });
     sync();
-  }
-
-  // Staff document viewer: zoom and rotate the photo on screen. The tabs
-  // themselves are radio buttons and need no script.
-  function documentViewer(viewer) {
-    const tools = viewer.querySelector("[data-viewer-tools]");
-    if (!tools || !viewer.querySelector("img[data-zoomable]")) return;
-    tools.hidden = false;
-    const looks = new Map();
-    const visible = () =>
-      Array.from(viewer.querySelectorAll("img[data-zoomable]")).find((image) => image.offsetParent !== null);
-    tools.addEventListener("click", (event) => {
-      const button = event.target.closest("button");
-      const image = visible();
-      if (!button || !image) return;
-      const look = looks.get(image) || { zoom: 1, turn: 0 };
-      if (button.dataset.zoom) look.zoom = Math.min(4, Math.max(0.5, look.zoom + Number(button.dataset.zoom) * 0.25));
-      if (button.hasAttribute("data-rotate")) look.turn = (look.turn + 90) % 360;
-      looks.set(image, look);
-      image.style.transform = `rotate(${look.turn}deg) scale(${look.zoom})`;
-    });
   }
 
   // A Copy button beside text to copy (the Linux install command), shown

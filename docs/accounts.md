@@ -321,3 +321,22 @@ Agent tokens carry the `mcp` scope and can never file a return. `/mcp`
 accepts only those: an app's token (`app`, `books`) gets 403
 `insufficient_scope`. So every agent that reads an account shows on the
 account page, where the person can remove it.
+
+## Fonts and icons
+
+The owner pages, the filing site and the Bot site load nothing from another
+host. Their type and icons are files in `src/assets/fonts/` (each family
+beside its licence), served under `/assets/fonts/` like the staff pages' fonts
+and described by two stylesheets: `/assets/fonts.css` (Bricolage Grotesque,
+Figtree, IBM Plex Mono, JetBrains Mono and the icon subset) and
+`/assets/bot-fonts.css` (Manrope, Space Grotesk and the full icon font, as the
+Bot site names its icons from compiled code). `tests/site_assets.rs` renders
+the pages and fails on any address that is not this server's.
+
+The icon subset holds exactly the Material Symbols named in
+`src/assets/fonts/material-symbols-icons.txt`. A template that uses another
+icon fails that test: add the name to the list and rebuild the font from the
+full variable font (`wght,FILL` axes) with
+`scripts/subset-icons.py FULL.woff2 src/assets/fonts/material-symbols-icons.txt
+src/assets/fonts/material-symbols-outlined-subset.woff2` (needs fontTools and
+brotli).

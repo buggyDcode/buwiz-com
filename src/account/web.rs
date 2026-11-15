@@ -105,6 +105,8 @@ pub fn router(state: AppState, pages: topcoat::router::Router) -> Router {
     let router = Router::new()
         .route("/healthz", get(|| async { "ok" }))
         .route("/assets/site.css", get(stylesheet))
+        .route("/assets/fonts.css", get(fonts_stylesheet))
+        .route("/assets/bot-fonts.css", get(bot_fonts_stylesheet))
         .route("/assets/home.css", get(home_stylesheet))
         .route("/assets/account.css", get(account_stylesheet))
         .route("/assets/account.js", get(account_script))
@@ -229,6 +231,16 @@ async fn stylesheet() -> Response {
     css(include_str!("../sites/site.css"))
 }
 
+/// The @font-face rules of the pages' fonts, from this server's own files.
+async fn fonts_stylesheet() -> Response {
+    css(include_str!("../assets/fonts/fonts.css"))
+}
+
+/// The Bot site's: Manrope, Space Grotesk and the full icon font.
+async fn bot_fonts_stylesheet() -> Response {
+    css(include_str!("../assets/fonts/bot-fonts.css"))
+}
+
 async fn home_stylesheet() -> Response {
     css(include_str!("../sites/home.css"))
 }
@@ -279,7 +291,8 @@ fn text(body: &'static str, content_type: &'static str) -> Response {
 /// share card (also at /favicon.ico and in /site.webmanifest), and for the
 /// home page's AI
 /// agent demos the two printed 1601-C documents their Computer screen shows
-/// and the font those use; and the staff pages' fonts. (path under /assets,
+/// and the font those use; and the fonts of the staff, owner, filing and Bot
+/// pages. (path under /assets,
 /// content type, bytes)
 pub(crate) const ASSETS: &[(&str, &str, &[u8])] = &[
     ("brand/buwiz_logo_light.webp", "image/webp", include_bytes!("../assets/brand/buwiz_logo_light.webp")),
@@ -329,6 +342,65 @@ pub(crate) const ASSETS: &[(&str, &str, &[u8])] = &[
         "fonts/ibm-plex-mono-semibold-latin1.woff2",
         "font/woff2",
         include_bytes!("../assets/fonts/ibm-plex-mono-semibold-latin1.woff2"),
+    ),
+    // The owner pages', the filing site's and the Bot site's type (fonts.css,
+    // bot-fonts.css), formerly from Google Fonts: Bricolage Grotesque,
+    // Figtree, JetBrains Mono, Manrope and Space Grotesk, Latin, Latin
+    // Extended and Vietnamese cuts, all OFL (licences beside them).
+    (
+        "fonts/bricolage-grotesque-latin.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/bricolage-grotesque-latin.woff2"),
+    ),
+    (
+        "fonts/bricolage-grotesque-latin-ext.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/bricolage-grotesque-latin-ext.woff2"),
+    ),
+    (
+        "fonts/bricolage-grotesque-vietnamese.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/bricolage-grotesque-vietnamese.woff2"),
+    ),
+    ("fonts/figtree-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/figtree-latin.woff2")),
+    ("fonts/figtree-latin-ext.woff2", "font/woff2", include_bytes!("../assets/fonts/figtree-latin-ext.woff2")),
+    ("fonts/jetbrains-mono-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/jetbrains-mono-latin.woff2")),
+    (
+        "fonts/jetbrains-mono-latin-ext.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/jetbrains-mono-latin-ext.woff2"),
+    ),
+    (
+        "fonts/jetbrains-mono-vietnamese.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/jetbrains-mono-vietnamese.woff2"),
+    ),
+    ("fonts/manrope-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/manrope-latin.woff2")),
+    ("fonts/manrope-latin-ext.woff2", "font/woff2", include_bytes!("../assets/fonts/manrope-latin-ext.woff2")),
+    ("fonts/manrope-vietnamese.woff2", "font/woff2", include_bytes!("../assets/fonts/manrope-vietnamese.woff2")),
+    ("fonts/space-grotesk-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/space-grotesk-latin.woff2")),
+    (
+        "fonts/space-grotesk-latin-ext.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/space-grotesk-latin-ext.woff2"),
+    ),
+    (
+        "fonts/space-grotesk-vietnamese.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/space-grotesk-vietnamese.woff2"),
+    ),
+    // Material Symbols Outlined (Apache-2.0), variable (FILL, wght): the
+    // subset of the icons the owner and filing pages use
+    // (material-symbols-icons.txt), and the full font for the Bot site.
+    (
+        "fonts/material-symbols-outlined-subset.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/material-symbols-outlined-subset.woff2"),
+    ),
+    (
+        "fonts/material-symbols-outlined.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/material-symbols-outlined.woff2"),
     ),
 ];
 
