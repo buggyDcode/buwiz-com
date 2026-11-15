@@ -347,20 +347,48 @@ pub(crate) const ASSETS: &[(&str, &str, &[u8])] = &[
     // bot-fonts.css), formerly from Google Fonts: Bricolage Grotesque,
     // Figtree, JetBrains Mono, Manrope and Space Grotesk, Latin, Latin
     // Extended and Vietnamese cuts, all OFL (licences beside them).
-    ("fonts/bricolage-grotesque-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/bricolage-grotesque-latin.woff2")),
-    ("fonts/bricolage-grotesque-latin-ext.woff2", "font/woff2", include_bytes!("../assets/fonts/bricolage-grotesque-latin-ext.woff2")),
-    ("fonts/bricolage-grotesque-vietnamese.woff2", "font/woff2", include_bytes!("../assets/fonts/bricolage-grotesque-vietnamese.woff2")),
+    (
+        "fonts/bricolage-grotesque-latin.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/bricolage-grotesque-latin.woff2"),
+    ),
+    (
+        "fonts/bricolage-grotesque-latin-ext.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/bricolage-grotesque-latin-ext.woff2"),
+    ),
+    (
+        "fonts/bricolage-grotesque-vietnamese.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/bricolage-grotesque-vietnamese.woff2"),
+    ),
     ("fonts/figtree-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/figtree-latin.woff2")),
     ("fonts/figtree-latin-ext.woff2", "font/woff2", include_bytes!("../assets/fonts/figtree-latin-ext.woff2")),
     ("fonts/jetbrains-mono-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/jetbrains-mono-latin.woff2")),
-    ("fonts/jetbrains-mono-latin-ext.woff2", "font/woff2", include_bytes!("../assets/fonts/jetbrains-mono-latin-ext.woff2")),
-    ("fonts/jetbrains-mono-vietnamese.woff2", "font/woff2", include_bytes!("../assets/fonts/jetbrains-mono-vietnamese.woff2")),
+    (
+        "fonts/jetbrains-mono-latin-ext.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/jetbrains-mono-latin-ext.woff2"),
+    ),
+    (
+        "fonts/jetbrains-mono-vietnamese.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/jetbrains-mono-vietnamese.woff2"),
+    ),
     ("fonts/manrope-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/manrope-latin.woff2")),
     ("fonts/manrope-latin-ext.woff2", "font/woff2", include_bytes!("../assets/fonts/manrope-latin-ext.woff2")),
     ("fonts/manrope-vietnamese.woff2", "font/woff2", include_bytes!("../assets/fonts/manrope-vietnamese.woff2")),
     ("fonts/space-grotesk-latin.woff2", "font/woff2", include_bytes!("../assets/fonts/space-grotesk-latin.woff2")),
-    ("fonts/space-grotesk-latin-ext.woff2", "font/woff2", include_bytes!("../assets/fonts/space-grotesk-latin-ext.woff2")),
-    ("fonts/space-grotesk-vietnamese.woff2", "font/woff2", include_bytes!("../assets/fonts/space-grotesk-vietnamese.woff2")),
+    (
+        "fonts/space-grotesk-latin-ext.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/space-grotesk-latin-ext.woff2"),
+    ),
+    (
+        "fonts/space-grotesk-vietnamese.woff2",
+        "font/woff2",
+        include_bytes!("../assets/fonts/space-grotesk-vietnamese.woff2"),
+    ),
     // Material Symbols Outlined (Apache-2.0), variable (FILL, wght): the
     // subset of the icons the owner and filing pages use
     // (material-symbols-icons.txt), and the full font for the Bot site.
